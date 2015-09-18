@@ -1,0 +1,4 @@
+[package]
+name = "qwerty_dvorak"
+version = "0.1.0"
+authors = ["Alex Weisberger <alex.m.weisberger@gmail.com>"]
