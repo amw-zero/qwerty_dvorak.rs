@@ -58,11 +58,13 @@ fn parse_words<'a>(dict_file: &mut File, dict_contents: &'a mut String) -> Vec<&
 fn main() {
     let qd_map = qd_map();
 
-    // Parse dict
+    // Parse dictionary file
     let mut dict_file = open_dict();
     let mut s = String::new();
     let words = parse_words(&mut dict_file, &mut s);
 
+    // Words with e, q, w, and z will be invalid when converted
+    // to Dvorak because those positions are special characters
     let valid_words: Vec<&&str> = words.iter().filter(|word| 
         !word.contains("q") && !word.contains("Q") &&
         !word.contains("w") && !word.contains("W") &&
@@ -70,13 +72,14 @@ fn main() {
         !word.contains("z") && !word.contains("Z")
     ).collect();
 
-    // create index
+    // Create search index
     let mut index: HashMap<String, bool> = HashMap::new();  
     for word in &words {
         index.insert(String::from(*word), true);
     }
 
-    // Convert and check
+    // Convert words to Dvorak and see if the converted word is still
+    // in the dictionary
     for word in valid_words {
         let converted = word.chars().map(|c| qd_map[&c]).collect::<String>();
         match index.get(&converted) {
