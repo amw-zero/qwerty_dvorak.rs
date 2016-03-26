@@ -56,8 +56,6 @@ fn parse_words<'a>(dict_file: &mut File, dict_contents: &'a mut String) -> Vec<&
 }
 
 fn main() {
-    let qd_map = qd_map();
-
     // Parse dictionary file
     let mut dict_file = open_dict();
     let mut s = String::new();
@@ -77,6 +75,9 @@ fn main() {
     for word in &words {
         index.insert(String::from(*word), true);
     }
+
+    // Qwerty -> Dvorak conversion map
+    let qd_map = qd_map();
 
     // Convert words to Dvorak and see if the converted word is still
     // in the dictionary
