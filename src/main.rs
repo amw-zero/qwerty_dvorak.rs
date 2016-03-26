@@ -45,7 +45,6 @@ fn open_dict() -> File {
 }
 
 fn parse_words<'a>(dict_file: &mut File, dict_contents: &'a mut String) -> Vec<&'a str> {
-    // Use str.lines() ?
     let words = match dict_file.read_to_string(dict_contents) {
         Ok(_) => {
             dict_contents.split_whitespace().collect::<Vec<&'a str>>()
