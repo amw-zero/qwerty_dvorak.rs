@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::fs::File;
 use std::path::Path;
 use std::error::Error;
@@ -44,10 +45,10 @@ fn open_dict() -> File {
     file
 }
 
-fn parse_words<'a>(dict_file: &mut File, dict_contents: &'a mut String) -> Vec<&'a str> {   
+fn parse_words<'a>(dict_file: &mut File, dict_contents: &'a mut String) -> HashSet<String> {   
     let words = match dict_file.read_to_string(dict_contents) {
         Ok(_) => {            
-            dict_contents.lines().map(|line| line.trim_right()).collect::<Vec<&'a str>>()
+            dict_contents.lines().map(|line| line.trim_right().to_string()).collect::<HashSet<String>>()
         }
         Err(_) => panic!("couldn't parse dict file")
     };
@@ -62,29 +63,21 @@ fn main() {
 
     // Words with e, q, w, and z will be invalid when converted
     // to Dvorak because those positions are special characters
-    let valid_words: Vec<&&str> = words.iter().filter(|word| 
+    let valid_words: HashSet<&String> = words.iter().filter(|word| 
         !word.contains("q") && !word.contains("Q") &&
         !word.contains("w") && !word.contains("W") &&
         !word.contains("e") && !word.contains("E") && 
         !word.contains("z") && !word.contains("Z")
     ).collect();
 
-    // Create search index
-    let mut index: HashMap<String, bool> = HashMap::new();  
-    for word in &words {
-        index.insert(String::from(*word), true);
-    }
-
     // Qwerty -> Dvorak conversion map
     let qd_map = qd_map();
 
-    // Convert words to Dvorak and see if the converted word is still
-    // in the dictionary
-    for word in valid_words {
-        let converted = word.chars().map(|c| qd_map[&c]).collect::<String>();
-        match index.get(&converted) {
-            Some(_) => println!("{} -> {}", word, converted),
-            None    => {}
-        };
+    let mut dvorak_words: HashSet<String> = HashSet::new();  
+    for word in &valid_words {
+        let dvorak_word: String = word.chars().map(|c| qd_map[&c]).collect();
+        dvorak_words.insert(dvorak_word);
     }
+
+    println!("{:?}", words.intersection(&dvorak_words).collect::<Vec<&String>>());
 }
