@@ -1,90 +1,124 @@
-use std::collections::HashMap;
+use std::collections::HashSet;
 use std::fs::File;
-use std::path::Path;
 use std::error::Error;
 use std::io::prelude::*;
-
-macro_rules! hash {
-    ( $( $k:expr => $v:expr ),* ) => {
-        {
-            let mut tmp_hash = HashMap::new();
-            $(
-                tmp_hash.insert($k, $v);
-            )*
-            tmp_hash
-        }
-    };
-}
-
-fn qd_map() -> HashMap<char, char> {
-    hash!(
-        'a' => 'a', 'A' => 'A', 'b' => 'x', 'B' => 'X',    
-        'c' => 'j', 'C' => 'J', 'd' => 'e', 'D' => 'E',    
-        'f' => 'u', 'F' => 'U', 'g' => 'i', 'G' => 'I',    
-        'h' => 'd', 'H' => 'D', 'i' => 'c', 'I' => 'C',    
-        'j' => 'h', 'J' => 'H', 'k' => 't', 'K' => 'T',
-        'l' => 'n', 'L' => 'N', 'm' => 'm', 'M' => 'M',    
-        'n' => 'b', 'N' => 'B', 'o' => 'r', 'O' => 'R',    
-        'p' => 'l', 'P' => 'L', 'r' => 'p', 'R' => 'P',    
-        's' => 'o', 'S' => 'O', 't' => 'y', 'T' => 'Y',    
-        'u' => 'g', 'U' => 'G', 'v' => 'k', 'V' => 'K',    
-        'x' => 'q', 'X' => 'Q', 'y' => 'f', 'Y' => 'F'
-     )
-}
+use std::str;
 
 fn open_dict() -> File {
-    let path = Path::new("/usr/share/dict/words");
-    let display = path.display();
-    
-    let file = match File::open(&path) {
-        Err(why) => panic!("couldn't open {}: {}", display,
-                                                   Error::description(&why)),
-        Ok(file) => file
-    };
-    file
+    let path = "/usr/share/dict/words";
+    match File::open(path) {
+        Ok(file) => file,
+        Err(e) => panic!("couldn't open {}: {}", path, Error::description(&e))
+    }
 }
 
-fn parse_words<'a>(dict_file: &mut File, dict_contents: &'a mut String) -> Vec<&'a str> {   
-    let words = match dict_file.read_to_string(dict_contents) {
-        Ok(_) => {            
-            dict_contents.lines().map(|line| line.trim_right()).collect::<Vec<&'a str>>()
-        }
-        Err(_) => panic!("couldn't parse dict file")
-    };
-    words
+fn parse_words(dict_contents: &[u8]) -> Vec<&[u8]> {
+    dict_contents.split(|&byte| byte == b'\n').collect()
 }
 
 fn main() {
     // Parse dictionary file
     let mut dict_file = open_dict();
-    let mut s = String::new();
-    let words = parse_words(&mut dict_file, &mut s);
 
-    // Words with e, q, w, and z will be invalid when converted
-    // to Dvorak because those positions are special characters
-    let valid_words: Vec<&&str> = words.iter().filter(|word| 
-        !word.contains("q") && !word.contains("Q") &&
-        !word.contains("w") && !word.contains("W") &&
-        !word.contains("e") && !word.contains("E") && 
-        !word.contains("z") && !word.contains("Z")
-    ).collect();
+    let file_size = dict_file.metadata().unwrap().len();
+    let mut dict_contents = Vec::with_capacity(file_size as usize);
+    dict_file.read_to_end(&mut dict_contents).expect("couldn't read dict file");
 
-    // Create search index
-    let mut index: HashMap<String, bool> = HashMap::new();  
-    for word in &words {
-        index.insert(String::from(*word), true);
-    }
+    let words = parse_words(&dict_contents);
 
-    // Qwerty -> Dvorak conversion map
-    let qd_map = qd_map();
+    let index: HashSet<&[u8]> = words.iter().cloned().collect();
 
     // Convert words to Dvorak and see if the converted word is still
     // in the dictionary
-    for word in valid_words {
-        let converted = word.chars().map(|c| qd_map[&c]).collect::<String>();
-        match index.get(&converted) {
-            Some(_) => println!("{} -> {}", word, converted),
-            None    => {}
-        };
+    for word in words {
+        let converted: Vec<u8> = word.iter().cloned().map(qd_map).collect();
+        if index.contains(&*converted) {
+            unsafe {
+                println!("{} -> {}", str::from_utf8_unchecked(&word),
+                                     str::from_utf8_unchecked(&converted));
+            }
+        }
     }
 }
+
+#[inline]
+fn qd_map(b: u8) -> u8 { QD_MAP[b as usize] }
+
+static QD_MAP: [u8; 256] = [
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 00-0F
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 10-1F
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 20-2F
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 30-3F
+    0,    // @
+    b'A', // A
+    b'X', // B
+    b'J', // C
+    b'E', // D
+    0,    // E
+    b'U', // F
+    b'I', // G
+    b'D', // H
+    b'C', // I
+    b'H', // J
+    b'T', // K
+    b'N', // L
+    b'M', // M
+    b'B', // N
+    b'R', // O
+    b'L', // P
+    0,    // Q
+    b'P', // R
+    b'O', // S
+    b'Y', // T
+    b'G', // U
+    b'K', // V
+    0,    // W
+    b'Q', // X
+    b'F', // Y
+    0,    // Z
+    0,    // [
+    0,    // \
+    0,    // ]
+    0,    // ^
+    0,    // _
+    0,    // `
+    b'a', // a
+    b'x', // b
+    b'j', // c
+    b'e', // d
+    0,    // e
+    b'u', // f
+    b'i', // g
+    b'd', // h
+    b'c', // i
+    b'h', // j
+    b't', // k
+    b'n', // l
+    b'm', // m
+    b'b', // n
+    b'r', // o
+    b'l', // p
+    0,    // q
+    b'p', // r
+    b'o', // s
+    b'y', // t
+    b'g', // u
+    b'k', // v
+    0,    // w
+    b'q', // x
+    b'f', // y
+    0,    // z
+    0,    // )
+    0,    // |
+    0,    // }
+    0,    // -
+    0,    // 7F
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 80-8F
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 90-9F
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // A0-AF
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // B0-BF
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // C0-CF
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // D0-DF
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // E0-EF
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // F0-FF
+];
