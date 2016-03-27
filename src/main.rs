@@ -44,10 +44,10 @@ fn open_dict() -> File {
     file
 }
 
-fn parse_words<'a>(dict_file: &mut File, dict_contents: &'a mut String) -> Vec<&'a str> {
+fn parse_words<'a>(dict_file: &mut File, dict_contents: &'a mut String) -> Vec<&'a str> {   
     let words = match dict_file.read_to_string(dict_contents) {
-        Ok(_) => {
-            dict_contents.split_whitespace().collect::<Vec<&'a str>>()
+        Ok(_) => {            
+            dict_contents.lines().map(|line| line.trim_right()).collect::<Vec<&'a str>>()
         }
         Err(_) => panic!("couldn't parse dict file")
     };
