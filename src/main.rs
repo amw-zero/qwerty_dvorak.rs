@@ -36,22 +36,16 @@ fn open_dict() -> File {
     let path = Path::new("/usr/share/dict/words");
     let display = path.display();
     
-    let file = match File::open(&path) {
+    match File::open(&path) {
         Err(why) => panic!("couldn't open {}: {}", display,
                                                    Error::description(&why)),
         Ok(file) => file
-    };
-    file
+    }
 }
 
 fn parse_words<'a>(dict_file: &mut File, dict_contents: &'a mut String) -> Vec<&'a str> {   
-    let words = match dict_file.read_to_string(dict_contents) {
-        Ok(_) => {            
-            dict_contents.lines().map(|line| line.trim_right()).collect::<Vec<&'a str>>()
-        }
-        Err(_) => panic!("couldn't parse dict file")
-    };
-    words
+    dict_file.read_to_string(dict_contents).expect("couldn't parse dict file");
+    dict_contents.lines().map(|line| line.trim_right()).collect::<Vec<&'a str>>()
 }
 
 fn main() {
@@ -63,10 +57,10 @@ fn main() {
     // Words with e, q, w, and z will be invalid when converted
     // to Dvorak because those positions are special characters
     let valid_words: Vec<&&str> = words.iter().filter(|word| 
-        !word.contains("q") && !word.contains("Q") &&
-        !word.contains("w") && !word.contains("W") &&
-        !word.contains("e") && !word.contains("E") && 
-        !word.contains("z") && !word.contains("Z")
+        !word.contains('q') && !word.contains('Q') &&
+        !word.contains('w') && !word.contains('W') &&
+        !word.contains('e') && !word.contains('E') && 
+        !word.contains('z') && !word.contains('Z')
     ).collect();
 
     // Create search index
@@ -82,9 +76,8 @@ fn main() {
     // in the dictionary
     for word in valid_words {
         let converted = word.chars().map(|c| qd_map[&c]).collect::<String>();
-        match index.get(&converted) {
-            Some(_) => println!("{} -> {}", word, converted),
-            None    => {}
-        };
+        if index.get(&converted).is_some() {
+            println!("{} -> {}", word, converted);
+        }
     }
 }
