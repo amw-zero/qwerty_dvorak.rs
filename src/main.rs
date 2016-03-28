@@ -26,11 +26,20 @@ fn main() {
 
     let words = parse_words(&dict_contents);
 
+    // Words with e, q, w, and z will be invalid when converted
+    // to Dvorak because those positions are special characters
+    let valid_words: Vec<&[u8]> = words.iter().filter(|word|
+        !word.iter().any(|c|
+            *c == b'q' || *c == b'Q' || *c == b'w' || *c == b'W' ||
+            *c == b'e' || *c == b'E' || *c == b'z' || *c == b'Z'
+        )
+    ).cloned().collect();
+
     let index: HashSet<&[u8]> = words.iter().cloned().collect();
 
     // Convert words to Dvorak and see if the converted word is still
     // in the dictionary
-    for word in words {
+    for word in valid_words {
         let converted: Vec<u8> = word.iter().cloned().map(qd_map).collect();
         if index.contains(&*converted) {
             unsafe {
