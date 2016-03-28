@@ -63,10 +63,10 @@ fn main() {
     // Words with e, q, w, and z will be invalid when converted
     // to Dvorak because those positions are special characters
     let valid_words: Vec<&&str> = words.iter().filter(|word| 
-        !word.contains("q") && !word.contains("Q") &&
-        !word.contains("w") && !word.contains("W") &&
-        !word.contains("e") && !word.contains("E") && 
-        !word.contains("z") && !word.contains("Z")
+        !word.chars().any(|c| 
+            c == 'q' || c == 'Q' || c == 'w' || c == 'W' ||
+            c == 'e' || c == 'E' || c == 'z' || c == 'Z'
+        )
     ).collect();
 
     // Create search index
